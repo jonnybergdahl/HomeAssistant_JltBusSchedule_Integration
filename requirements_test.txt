@@ -1,2 +1,2 @@
-jlt-bus-schedule==1.0.0
+jlt-bus-schedule==1.1.0
 pytest-homeassistant-custom-component

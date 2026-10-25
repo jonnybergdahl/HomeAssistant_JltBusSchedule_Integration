@@ -8,6 +8,6 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/jonnybergdahl/HomeAssistant_JltBusSchedule_Integration/issues",
   "loggers": ["jlt_bus_schedule"],
-  "requirements": ["jlt-bus-schedule==1.0.0"],
+  "requirements": ["jlt-bus-schedule==1.1.0"],
   "version": "1.0.1"
 }
