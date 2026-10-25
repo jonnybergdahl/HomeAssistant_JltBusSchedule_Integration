@@ -33,7 +33,7 @@ DEFAULT_OPTIONS = {
 }
 
 
-async def _start_flow(hass: HomeAssistant, stop_id: str = str(STOP_ID), **extra):
+async def _start_flow(hass: HomeAssistant, query: str = str(STOP_ID)):
     """Start a flow and submit the user step."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
@@ -41,23 +41,44 @@ async def _start_flow(hass: HomeAssistant, stop_id: str = str(STOP_ID), **extra)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     return await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_STOP_ID: stop_id, **extra}
+        result["flow_id"], {"stop": query}
     )
+
+
+def _options(result, key: str) -> dict[str, str]:
+    """Return the options of a select field as label -> value."""
+    selector = result["data_schema"].schema[key]
+    return {option["label"]: option["value"] for option in selector.config["options"]}
 
 
 def _route_options(result) -> dict[str, str]:
     """Return the route selector options as label -> value."""
-    selector = result["data_schema"].schema["route"]
-    return {option["label"]: option["value"] for option in selector.config["options"]}
+    return _options(result, "route")
 
 
-async def test_user_flow(hass: HomeAssistant, mock_departures: AsyncMock) -> None:
-    """Test selecting a line and destination from the upcoming departures."""
-    result = await _start_flow(hass, f" {STOP_ID} ", **{CONF_STOP_NAME: "Rådhusparken"})
+async def test_search_flow(
+    hass: HomeAssistant, mock_departures: AsyncMock, mock_stop_search: AsyncMock
+) -> None:
+    """Test searching for a stop and selecting a line and destination."""
+    result = await _start_flow(hass, " Rådhusparken ")
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "stop"
+    assert mock_stop_search.await_args.args[1:] == ("Rådhusparken",)
+    stops = _options(result, "stop")
+    assert stops == {
+        f"Jönköping Rådhusparken ({STOP_ID})": str(STOP_ID),
+        "Jönköping Resecentrum (6001001)": "6001001",
+    }
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"stop": str(STOP_ID)}
+    )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "route"
-    assert result["description_placeholders"] == {"stop": "Rådhusparken"}
+    assert result["description_placeholders"] == {"stop": "Jönköping Rådhusparken"}
+    assert mock_departures.await_args.args[1] == STOP_ID
     options = _route_options(result)
     # Sorted on line number, then destination
     assert list(options) == [
@@ -72,30 +93,36 @@ async def test_user_flow(hass: HomeAssistant, mock_departures: AsyncMock) -> Non
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == f"Rådhusparken: 1 mot {DESTINATION}"
+    assert result["title"] == f"Jönköping Rådhusparken: 1 mot {DESTINATION}"
     assert result["result"].unique_id == f"{STOP_ID}_1_{DESTINATION}"
     assert result["data"] == {
         CONF_STOP_ID: STOP_ID,
-        CONF_STOP_NAME: "Rådhusparken",
+        CONF_STOP_NAME: "Jönköping Rådhusparken",
         CONF_LINE: "1",
         CONF_DESTINATION: DESTINATION,
         CONF_DIRECTION: "north",
     }
     assert result["options"] == DEFAULT_OPTIONS
-    mock_departures.assert_awaited()
 
 
-async def test_user_flow_without_stop_name(
-    hass: HomeAssistant, mock_departures: AsyncMock
+async def test_stop_id_flow(
+    hass: HomeAssistant, mock_departures: AsyncMock, mock_stop_search: AsyncMock
 ) -> None:
-    """Test that the stop ID is used when no stop name is given."""
-    result = await _start_flow(hass)
+    """Test entering a stop ID directly, which skips the search."""
+    result = await _start_flow(hass, f" {STOP_ID} ")
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "route"
+    assert result["description_placeholders"] == {"stop": str(STOP_ID)}
+    mock_stop_search.assert_not_awaited()
+
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {"route": "1", CONF_DIRECTION: "south"}
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == f"{STOP_ID}: 1 mot Råslätt"
+    assert result["data"][CONF_STOP_ID] == STOP_ID
     assert result["data"][CONF_STOP_NAME] is None
 
 
@@ -123,29 +150,61 @@ async def test_manual_flow(hass: HomeAssistant, mock_departures: AsyncMock) -> N
     }
 
 
-@pytest.mark.parametrize("stop_id", ["abc", "60013a", ""])
-async def test_invalid_stop_id(
-    hass: HomeAssistant, mock_departures: AsyncMock, stop_id: str
+@pytest.mark.parametrize("query", ["Finnsinte", "  "])
+async def test_no_stops_found(
+    hass: HomeAssistant, mock_stop_search: AsyncMock, query: str
 ) -> None:
-    """Test that a non numeric stop ID is rejected."""
-    result = await _start_flow(hass, stop_id)
+    """Test a search without results, and an empty search."""
+    mock_stop_search.return_value = []
+
+    result = await _start_flow(hass, query)
 
     assert result["type"] is FlowResultType.FORM
-    assert result["errors"] == {CONF_STOP_ID: "invalid_stop_id"}
-    mock_departures.assert_not_awaited()
+    assert result["step_id"] == "user"
+    assert result["errors"] == {"stop": "no_stops_found"}
 
 
 @pytest.mark.parametrize(
     ("side_effect", "error"),
     [(JltConnectionError, "cannot_connect"), (ValueError, "unknown")],
 )
-async def test_fetch_errors(
+async def test_search_errors(
+    hass: HomeAssistant,
+    mock_stop_search: AsyncMock,
+    side_effect: type[Exception],
+    error: str,
+) -> None:
+    """Test errors when searching for stops, and recovering from them."""
+    return_value = mock_stop_search.return_value
+    mock_stop_search.side_effect = side_effect
+
+    result = await _start_flow(hass, "Rådhusparken")
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "user"
+    assert result["errors"] == {"base": error}
+
+    mock_stop_search.side_effect = None
+    mock_stop_search.return_value = return_value
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"stop": "Rådhusparken"}
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "stop"
+
+
+@pytest.mark.parametrize(
+    ("side_effect", "error"),
+    [(JltConnectionError, "cannot_connect"), (ValueError, "unknown")],
+)
+async def test_fetch_errors_with_stop_id(
     hass: HomeAssistant,
     mock_departures: AsyncMock,
     side_effect: type[Exception],
     error: str,
 ) -> None:
-    """Test errors when fetching departures, and recovering from them."""
+    """Test errors when fetching departures for a stop ID, and recovering."""
     return_value = mock_departures.return_value
     mock_departures.side_effect = side_effect
 
@@ -158,7 +217,33 @@ async def test_fetch_errors(
     mock_departures.side_effect = None
     mock_departures.return_value = return_value
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_STOP_ID: str(STOP_ID)}
+        result["flow_id"], {"stop": str(STOP_ID)}
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "route"
+
+
+async def test_fetch_errors_after_search(
+    hass: HomeAssistant, mock_departures: AsyncMock, mock_stop_search: AsyncMock
+) -> None:
+    """Test errors when fetching departures for a selected stop."""
+    return_value = mock_departures.return_value
+    mock_departures.side_effect = JltConnectionError
+
+    result = await _start_flow(hass, "Rådhusparken")
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"stop": str(STOP_ID)}
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "stop"
+    assert result["errors"] == {"base": "cannot_connect"}
+
+    mock_departures.side_effect = None
+    mock_departures.return_value = return_value
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"stop": str(STOP_ID)}
     )
 
     assert result["type"] is FlowResultType.FORM
@@ -232,3 +317,24 @@ async def test_live_user_flow(hass: HomeAssistant) -> None:
     assert result["step_id"] in ("route", "manual")
     if result["step_id"] == "route":
         assert any(label.startswith("1 mot ") for label in _route_options(result))
+
+
+@pytest.mark.live
+@pytest.mark.usefixtures("live_network")
+async def test_live_search_flow(hass: HomeAssistant) -> None:
+    """Test searching for a stop against the live JLT travel planner."""
+    result = await _start_flow(hass, "Rådhusparken")
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "stop"
+    stops = _options(result, "stop")
+    assert "Jönköping Rådhusparken (6001320)" in stops
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"stop": stops["Jönköping Rådhusparken (6001320)"]}
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result.get("errors") in (None, {})
+    assert result["step_id"] in ("route", "manual")
+    assert result["description_placeholders"] == {"stop": "Jönköping Rådhusparken"}

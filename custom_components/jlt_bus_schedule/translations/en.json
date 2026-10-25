@@ -2,15 +2,18 @@
   "config": {
     "step": {
       "user": {
-        "title": "Select bus stop",
-        "description": "Find the bus stop at https://www.jlt.se/res-med-oss/linjer-hallplatser/. The stop ID is the number at the end of the URL of the stop page.",
+        "title": "Find bus stop",
         "data": {
-          "stop_id": "Stop ID",
-          "stop_name": "Stop name"
+          "stop": "Bus stop"
         },
         "data_description": {
-          "stop_id": "For example 6001350.",
-          "stop_name": "Optional name used in the entry title."
+          "stop": "Name of the bus stop to search for, for example Rådhusparken. You can also enter a stop ID."
+        }
+      },
+      "stop": {
+        "title": "Select bus stop",
+        "data": {
+          "stop": "Bus stop"
         }
       },
       "route": {
@@ -39,8 +42,8 @@
       }
     },
     "error": {
-      "cannot_connect": "Failed to fetch departures from jlt.se.",
-      "invalid_stop_id": "The stop ID must be a number.",
+      "cannot_connect": "Failed to connect to JLT.",
+      "no_stops_found": "No bus stops found.",
       "unknown": "Unexpected error."
     },
     "abort": {

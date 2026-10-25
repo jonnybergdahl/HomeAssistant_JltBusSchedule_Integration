@@ -22,7 +22,7 @@ from homeassistant.helpers.selector import (
 )
 from homeassistant.util import slugify
 
-from .api import JltApiClient, JltError
+from .api import JltApiClient, JltError, Stop
 from .const import (
     CONF_DESTINATION,
     CONF_DIRECTION,
@@ -45,13 +45,9 @@ from .coordinator import JltBusScheduleConfigEntry
 _LOGGER = logging.getLogger(__name__)
 
 CONF_ROUTE = "route"
+CONF_STOP = "stop"
 
-STEP_USER_SCHEMA = vol.Schema(
-    {
-        vol.Required(CONF_STOP_ID): TextSelector(),
-        vol.Optional(CONF_STOP_NAME): TextSelector(),
-    }
-)
+STEP_USER_SCHEMA = vol.Schema({vol.Required(CONF_STOP): TextSelector()})
 
 STEP_MANUAL_SCHEMA = vol.Schema(
     {
@@ -71,41 +67,41 @@ class JltBusScheduleConfigFlow(ConfigFlow, domain=DOMAIN):
         """Initialize the flow."""
         self._stop_id: int = 0
         self._stop_name: str | None = None
+        self._stops: list[Stop] = []
         self._routes: list[tuple[str, str]] = []
+
+    @property
+    def _client(self) -> JltApiClient:
+        """Return a JLT client."""
+        return JltApiClient(async_get_clientsession(self.hass))
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Ask for the stop to monitor."""
+        """Ask for the name or ID of the stop to monitor."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            stop_id = user_input[CONF_STOP_ID].strip()
-            if not stop_id.isdigit():
-                errors[CONF_STOP_ID] = "invalid_stop_id"
-            else:
-                self._stop_id = int(stop_id)
-                self._stop_name = (user_input.get(CONF_STOP_NAME) or "").strip() or None
-                client = JltApiClient(async_get_clientsession(self.hass))
+            query = user_input[CONF_STOP].strip()
+            if query.isdigit():
+                self._stop_id = int(query)
+                self._stop_name = None
+                if (error := await self._async_fetch_routes()) is None:
+                    return await self._async_step_after_stop()
+                errors["base"] = error
+            elif query:
                 try:
-                    departures = await client.async_get_departures(
-                        self._stop_id, FETCH_COUNT
-                    )
+                    self._stops = await self._client.async_search_stops(query)
                 except JltError:
                     errors["base"] = "cannot_connect"
                 except Exception:
-                    _LOGGER.exception("Unexpected error fetching departures")
+                    _LOGGER.exception("Unexpected error searching for stops")
                     errors["base"] = "unknown"
                 else:
-                    self._routes = sorted(
-                        {(d.line, d.destination) for d in departures},
-                        key=lambda route: (
-                            (0, int(route[0])) if route[0].isdigit() else (1, 0),
-                            route,
-                        ),
-                    )
-                    if not self._routes:
-                        return await self.async_step_manual()
-                    return await self.async_step_route()
+                    if self._stops:
+                        return await self.async_step_stop()
+                    errors[CONF_STOP] = "no_stops_found"
+            else:
+                errors[CONF_STOP] = "no_stops_found"
 
         return self.async_show_form(
             step_id="user",
@@ -114,6 +110,72 @@ class JltBusScheduleConfigFlow(ConfigFlow, domain=DOMAIN):
             ),
             errors=errors,
         )
+
+    async def async_step_stop(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Let the user pick one of the stops matching the search."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            stop = next(
+                stop for stop in self._stops if str(stop.id) == user_input[CONF_STOP]
+            )
+            self._stop_id = stop.id
+            self._stop_name = stop.name
+            if (error := await self._async_fetch_routes()) is None:
+                return await self._async_step_after_stop()
+            errors["base"] = error
+
+        return self.async_show_form(
+            step_id="stop",
+            data_schema=self.add_suggested_values_to_schema(
+                vol.Schema(
+                    {
+                        vol.Required(CONF_STOP): SelectSelector(
+                            SelectSelectorConfig(
+                                options=[
+                                    SelectOptionDict(
+                                        value=str(stop.id),
+                                        label=f"{stop.name} ({stop.id})",
+                                    )
+                                    for stop in self._stops
+                                ],
+                                mode=SelectSelectorMode.LIST,
+                            )
+                        )
+                    }
+                ),
+                user_input,
+            ),
+            errors=errors,
+        )
+
+    async def _async_fetch_routes(self) -> str | None:
+        """Fetch the lines and destinations at the stop, return an error key."""
+        try:
+            departures = await self._client.async_get_departures(
+                self._stop_id, FETCH_COUNT
+            )
+        except JltError:
+            return "cannot_connect"
+        except Exception:
+            _LOGGER.exception("Unexpected error fetching departures")
+            return "unknown"
+
+        self._routes = sorted(
+            {(d.line, d.destination) for d in departures},
+            key=lambda route: (
+                (0, int(route[0])) if route[0].isdigit() else (1, 0),
+                route,
+            ),
+        )
+        return None
+
+    async def _async_step_after_stop(self) -> ConfigFlowResult:
+        """Continue with the route step, or manual entry without departures."""
+        if not self._routes:
+            return await self.async_step_manual()
+        return await self.async_step_route()
 
     async def async_step_route(
         self, user_input: dict[str, Any] | None = None

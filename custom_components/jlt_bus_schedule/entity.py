@@ -7,7 +7,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
 
 from .api import Departure
-from .const import CONF_DIRECTION, CONF_STOP_NAME, DOMAIN
+from .const import CONF_DIRECTION, CONF_STOP_NAME, DOMAIN, TRAVEL_PLANNER_URL
 from .coordinator import JltBusScheduleCoordinator
 
 
@@ -46,7 +46,7 @@ class JltBusScheduleEntity(CoordinatorEntity[JltBusScheduleCoordinator]):
             model=f"{entry.data.get(CONF_STOP_NAME) or coordinator.stop_id}, "
             f"line {coordinator.line} mot {coordinator.destination}",
             entry_type=DeviceEntryType.SERVICE,
-            configuration_url="https://www.jlt.se/res-med-oss/linjer-hallplatser/",
+            configuration_url=TRAVEL_PLANNER_URL,
         )
 
     @property

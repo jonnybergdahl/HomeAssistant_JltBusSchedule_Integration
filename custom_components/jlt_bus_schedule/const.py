@@ -23,3 +23,5 @@ MIN_SCAN_INTERVAL: Final = 30
 # Number of departures to request from JLT. The API returns departures for all
 # lines and directions at the stop, so fetch plenty and filter locally.
 FETCH_COUNT: Final = 60
+
+TRAVEL_PLANNER_URL: Final = "https://www.jlt.se/reseplaneraren/"

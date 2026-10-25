@@ -17,9 +17,12 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from custom_components.jlt_bus_schedule.api import (
     API_URL,
     JLT_TIMEZONE,
+    STOP_SEARCH_URL,
+    Stop,
     JltApiClient,
     JltConnectionError,
     parse_departures,
+    parse_stops,
 )
 from custom_components.jlt_bus_schedule.const import FETCH_COUNT
 
@@ -169,3 +172,64 @@ async def test_live_departures() -> None:
         assert departure.time_to_departure.startswith("Avgår")
         assert now - timedelta(hours=1) <= departure.departure
         assert departure.departure <= now + timedelta(days=1)
+
+
+def test_parse_recorded_stop_search() -> None:
+    """Test parsing a stop search response recorded from the travel planner."""
+    stops = parse_stops(load_fixture("stop_search_jonkoping.html"))
+
+    assert len(stops) == 12
+    assert stops[0] == Stop(id=6001242, name="Jönköping Juneporten")
+    assert Stop(id=6001320, name="Jönköping Rådhusparken") in stops
+
+
+def test_parse_stop_search_skips_invalid_and_duplicates() -> None:
+    """Test that options without a numeric ID and duplicates are skipped."""
+    html = """
+        <li class="travel-option" data-id="Jönköping  Elmia|6001241|0">Elmia</li>
+        <li class="travel-option" data-id="Storgatan 1, Jönköping|addr|1">x</li>
+        <li class="travel-option" data-id="Utan id">x</li>
+        <li class="travel-option">x</li>
+        <li class="travel-option" data-id="Jönköping Elmia|6001241|0">Elmia</li>
+    """
+
+    assert parse_stops(html) == [Stop(id=6001241, name="Jönköping Elmia")]
+
+
+async def test_client_searches_stops(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """Test searching for stops."""
+    aioclient_mock.get(STOP_SEARCH_URL, text=load_fixture("stop_search_jonkoping.html"))
+
+    client = JltApiClient(async_get_clientsession(hass))
+    stops = await client.async_search_stops("Jönköping")
+
+    assert len(stops) == 12
+    url = aioclient_mock.mock_calls[0][1]
+    assert url.query["letters"] == "Jönköping"
+    assert url.query["optType"] == "0"
+
+
+async def test_client_search_errors(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """Test that errors when searching raise JltConnectionError."""
+    aioclient_mock.get(STOP_SEARCH_URL, status=503)
+
+    client = JltApiClient(async_get_clientsession(hass))
+    with pytest.raises(JltConnectionError):
+        await client.async_search_stops("Jönköping")
+
+
+@pytest.mark.live
+@pytest.mark.usefixtures("live_network")
+async def test_live_stop_search() -> None:
+    """Test searching for stops against the live JLT travel planner."""
+    async with aiohttp.ClientSession() as session:
+        client = JltApiClient(session)
+        stops = await client.async_search_stops("Rådhusparken")
+        # The stop IDs from the search must work with the departure board
+        await client.async_get_departures(stops[0].id, 5)
+
+    assert Stop(id=6001320, name="Jönköping Rådhusparken") in stops

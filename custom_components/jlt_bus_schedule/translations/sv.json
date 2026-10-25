@@ -2,15 +2,18 @@
   "config": {
     "step": {
       "user": {
-        "title": "Välj hållplats",
-        "description": "Sök upp hållplatsen på https://www.jlt.se/res-med-oss/linjer-hallplatser/. Hållplats-ID är siffrorna i slutet av hållplatssidans URL.",
+        "title": "Sök hållplats",
         "data": {
-          "stop_id": "Hållplats-ID",
-          "stop_name": "Hållplatsnamn"
+          "stop": "Hållplats"
         },
         "data_description": {
-          "stop_id": "Till exempel 6001350.",
-          "stop_name": "Valfritt namn som används i postens titel."
+          "stop": "Namnet på hållplatsen att söka efter, till exempel Rådhusparken. Du kan också ange ett hållplats-ID."
+        }
+      },
+      "stop": {
+        "title": "Välj hållplats",
+        "data": {
+          "stop": "Hållplats"
         }
       },
       "route": {
@@ -39,8 +42,8 @@
       }
     },
     "error": {
-      "cannot_connect": "Kunde inte hämta avgångar från jlt.se.",
-      "invalid_stop_id": "Hållplats-ID måste vara ett nummer.",
+      "cannot_connect": "Kunde inte ansluta till JLT.",
+      "no_stops_found": "Inga hållplatser hittades.",
       "unknown": "Oväntat fel."
     },
     "abort": {

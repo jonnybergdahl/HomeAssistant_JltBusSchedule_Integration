@@ -13,7 +13,7 @@ import pytest_socket
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.plugins import _real_getaddrinfo
 
-from custom_components.jlt_bus_schedule.api import JLT_TIMEZONE, Departure
+from custom_components.jlt_bus_schedule.api import JLT_TIMEZONE, Departure, Stop
 from custom_components.jlt_bus_schedule.const import (
     CONF_DESTINATION,
     CONF_DIRECTION,
@@ -133,5 +133,19 @@ def mock_departures() -> Generator[AsyncMock]:
             make_departure(20, line="28"),
             make_departure(30),
             make_departure(45),
+        ]
+        yield mock
+
+
+@pytest.fixture
+def mock_stop_search() -> Generator[AsyncMock]:
+    """Patch the JLT client to return a fixed set of stops."""
+    with patch(
+        "custom_components.jlt_bus_schedule.api.JltApiClient.async_search_stops",
+        autospec=True,
+    ) as mock:
+        mock.return_value = [
+            Stop(id=STOP_ID, name="Jönköping Rådhusparken"),
+            Stop(id=6001001, name="Jönköping Resecentrum"),
         ]
         yield mock
