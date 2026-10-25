@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from jlt_bus_schedule import Departure
+
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
 
-from .api import Departure
 from .const import CONF_DIRECTION, CONF_STOP_NAME, DOMAIN, TRAVEL_PLANNER_URL
 from .coordinator import JltBusScheduleCoordinator
 

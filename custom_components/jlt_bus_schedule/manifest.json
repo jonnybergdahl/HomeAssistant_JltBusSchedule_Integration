@@ -7,7 +7,7 @@
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/jonnybergdahl/HomeAssistant_JltBusSchedule_Integration/issues",
-  "loggers": ["custom_components.jlt_bus_schedule"],
-  "requirements": ["beautifulsoup4>=4.12.0"],
-  "version": "1.0.0"
+  "loggers": ["jlt_bus_schedule"],
+  "requirements": ["jlt-bus-schedule==1.0.0"],
+  "version": "1.0.1"
 }

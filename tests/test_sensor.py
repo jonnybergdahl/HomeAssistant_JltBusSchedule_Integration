@@ -6,6 +6,7 @@ from datetime import timedelta
 from unittest.mock import AsyncMock
 
 from freezegun.api import FrozenDateTimeFactory
+from jlt_bus_schedule import JltConnectionError
 import pytest
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
@@ -14,8 +15,6 @@ from pytest_homeassistant_custom_component.common import (
 
 from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
-
-from custom_components.jlt_bus_schedule.api import JltConnectionError
 
 from .conftest import DESTINATION, NOW, make_departure
 

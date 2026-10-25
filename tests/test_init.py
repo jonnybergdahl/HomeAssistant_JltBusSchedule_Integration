@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock
 
+from jlt_bus_schedule import JltConnectionError
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -11,7 +12,6 @@ from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
-from custom_components.jlt_bus_schedule.api import JltConnectionError
 from custom_components.jlt_bus_schedule.const import DOMAIN, FETCH_COUNT
 
 from .conftest import STOP_ID

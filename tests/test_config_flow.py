@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock
 
+from jlt_bus_schedule import JltConnectionError
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -11,7 +12,6 @@ from homeassistant.config_entries import SOURCE_USER
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 
-from custom_components.jlt_bus_schedule.api import JltConnectionError
 from custom_components.jlt_bus_schedule.const import (
     CONF_DESTINATION,
     CONF_DIRECTION,

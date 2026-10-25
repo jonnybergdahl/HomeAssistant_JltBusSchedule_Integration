@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from jlt_bus_schedule import JltApiClient, JltError, Stop
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
@@ -22,7 +23,6 @@ from homeassistant.helpers.selector import (
 )
 from homeassistant.util import slugify
 
-from .api import JltApiClient, JltError, Stop
 from .const import (
     CONF_DESTINATION,
     CONF_DIRECTION,

@@ -4,16 +4,15 @@ from __future__ import annotations
 
 from collections.abc import Generator
 from datetime import datetime, timedelta
-from pathlib import Path
 import socket
 from unittest.mock import AsyncMock, patch
 
+from jlt_bus_schedule import JLT_TIMEZONE, Departure, Stop
 import pytest
 import pytest_socket
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.plugins import _real_getaddrinfo
 
-from custom_components.jlt_bus_schedule.api import JLT_TIMEZONE, Departure, Stop
 from custom_components.jlt_bus_schedule.const import (
     CONF_DESTINATION,
     CONF_DIRECTION,
@@ -25,8 +24,6 @@ from custom_components.jlt_bus_schedule.const import (
     CONF_TOO_LATE_THRESHOLD,
     DOMAIN,
 )
-
-FIXTURES = Path(__file__).parent / "fixtures"
 
 STOP_ID = 6001350
 LINE = "1"
@@ -53,35 +50,6 @@ def live_network(
     """
     pytest_socket._remove_restrictions()  # noqa: SLF001
     monkeypatch.setattr(socket, "getaddrinfo", _real_getaddrinfo)
-
-
-def load_fixture(name: str) -> str:
-    """Load a fixture file."""
-    return (FIXTURES / name).read_text(encoding="utf-8")
-
-
-def make_html(*suggestions: tuple[str, str, str]) -> str:
-    """Build a departure board fragment from (line, time text, direction)."""
-    return "\n".join(
-        f"""
-    <div class="travel-suggestion">
-        <a class="info" href="/res-med-oss/linjer-hallplatser/linje/?id={line}">
-            <p>
-                {time_text}
-            </p>
-            <div class="destination">
-                <div class="line-info-area">
-                    <div class="icon-shape number"><div><span class="text">S</span></div></div>
-                    <div class="icon-shape line-info"><span class="text">{line}</span></div>
-                </div>
-                <div class="direction">
-                    {direction}
-                </div>
-            </div>
-        </a>
-    </div>"""
-        for line, time_text, direction in suggestions
-    )
 
 
 def make_departure(
@@ -123,7 +91,7 @@ def mock_config_entry() -> MockConfigEntry:
 def mock_departures() -> Generator[AsyncMock]:
     """Patch the JLT client to return a fixed set of departures."""
     with patch(
-        "custom_components.jlt_bus_schedule.api.JltApiClient.async_get_departures",
+        "jlt_bus_schedule.JltApiClient.async_get_departures",
         autospec=True,
     ) as mock:
         mock.return_value = [
@@ -141,7 +109,7 @@ def mock_departures() -> Generator[AsyncMock]:
 def mock_stop_search() -> Generator[AsyncMock]:
     """Patch the JLT client to return a fixed set of stops."""
     with patch(
-        "custom_components.jlt_bus_schedule.api.JltApiClient.async_search_stops",
+        "jlt_bus_schedule.JltApiClient.async_search_stops",
         autospec=True,
     ) as mock:
         mock.return_value = [

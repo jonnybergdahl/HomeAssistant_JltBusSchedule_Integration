@@ -5,12 +5,13 @@ from __future__ import annotations
 from datetime import timedelta
 import logging
 
+from jlt_bus_schedule import Departure, JltApiClient, JltError
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .api import Departure, JltApiClient, JltError
 from .const import (
     CONF_DESTINATION,
     CONF_LINE,

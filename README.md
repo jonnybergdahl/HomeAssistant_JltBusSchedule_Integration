@@ -6,10 +6,9 @@ It is a port of the AppDaemon app [Python_Appdaemon_JltBusSchedule](https://gith
 to a native integration with UI configuration. It uses the same entity IDs, so existing dashboards and automations keep working
 (see [Migrating from the AppDaemon app](#migrating-from-the-appdaemon-app)).
 
-JLT has no public API for departures, so the integration scrapes
-`https://www.jlt.se/api/StopAreaApi/GetClosestDepartures?fromId={stop_id}&take=60`, the HTML fragment used by the departure board on jlt.se.
-Stops are looked up with the stop search of the [JLT travel planner](https://www.jlt.se/reseplaneraren/), which jlt.se embeds from
-`www.etiscloud.net`.
+JLT has no public API for departures, so the integration uses the [jlt-bus-schedule](https://pypi.org/project/jlt-bus-schedule/)
+library ([source](https://github.com/jonnybergdahl/Python-JLT-BusSchedule-Scraper)), which scrapes the departure board on jlt.se
+and the stop search of the [JLT travel planner](https://www.jlt.se/reseplaneraren/).
 
 ## Installation
 
@@ -124,11 +123,12 @@ The tests use [pytest-homeassistant-custom-component](https://github.com/Matthew
 which requires the same Python version as the latest Home Assistant release.
 
 ```shell
-python -m venv venv
-venv/bin/pip install -r requirements_test.txt
-venv/bin/pytest
+python -m venv .venv
+.venv/bin/pip install -r requirements_test.txt
+.venv/bin/pytest
 ```
 
 Tests marked `live` call the live jlt.se site and travel planner. Skip them with `pytest -m "not live"`.
+The scraping and parsing itself is tested in the [jlt-bus-schedule](https://github.com/jonnybergdahl/Python-JLT-BusSchedule-Scraper) repository.
 
 The brand images in `custom_components/jlt_bus_schedule/brand` are shown by Home Assistant 2026.3 and later.
