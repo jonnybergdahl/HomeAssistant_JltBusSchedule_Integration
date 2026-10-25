@@ -1,0 +1,92 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Välj hållplats",
+        "description": "Sök upp hållplatsen på https://www.jlt.se/res-med-oss/linjer-hallplatser/. Hållplats-ID är siffrorna i slutet av hållplatssidans URL.",
+        "data": {
+          "stop_id": "Hållplats-ID",
+          "stop_name": "Hållplatsnamn"
+        },
+        "data_description": {
+          "stop_id": "Till exempel 6001350.",
+          "stop_name": "Valfritt namn som används i postens titel."
+        }
+      },
+      "route": {
+        "title": "Välj linje och destination",
+        "description": "Kommande avgångar från {stop}.",
+        "data": {
+          "route": "Linje och destination",
+          "direction": "Riktningsalias"
+        },
+        "data_description": {
+          "direction": "Kort namn som north eller west. Det används i entitets-ID:n, till exempel sensor.jlt_bus_1_north_departure_1."
+        }
+      },
+      "manual": {
+        "title": "Ange linje och destination",
+        "description": "Inga kommande avgångar hittades från {stop}, så ange linje och destination manuellt.",
+        "data": {
+          "line": "Linje",
+          "destination": "Destination",
+          "direction": "Riktningsalias"
+        },
+        "data_description": {
+          "destination": "Som den visas på jlt.se, till exempel Huskvarna via Centrum-Elmia.",
+          "direction": "Kort namn som north eller west. Det används i entitets-ID:n, till exempel sensor.jlt_bus_1_north_departure_1."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Kunde inte hämta avgångar från jlt.se.",
+      "invalid_stop_id": "Hållplats-ID måste vara ett nummer.",
+      "unknown": "Oväntat fel."
+    },
+    "abort": {
+      "already_configured": "Den här linjen och destinationen är redan konfigurerad för hållplatsen."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "too_late_threshold": "Gräns för för sent",
+          "number_of_departures": "Antal avgångar",
+          "scan_interval": "Uppdateringsintervall"
+        },
+        "data_description": {
+          "too_late_threshold": "Antal minuter det tar att ta sig till hållplatsen.",
+          "number_of_departures": "Antal kommande avgångar att skapa entiteter för.",
+          "scan_interval": "Hur ofta avgångar hämtas från jlt.se."
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "too_late": {
+        "name": "Avgång {index} för sent"
+      }
+    },
+    "sensor": {
+      "departure": {
+        "name": "Avgång {index}",
+        "state_attributes": {
+          "line_number": { "name": "Linjenummer" },
+          "direction": { "name": "Riktning" },
+          "departure": { "name": "Avgång" },
+          "time_to_departure": { "name": "Tid till avgång" },
+          "minutes_to_departure": { "name": "Minuter till avgång" },
+          "too_late": { "name": "För sent" }
+        }
+      },
+      "departure_time": {
+        "name": "Avgång {index} tid"
+      },
+      "time_to_departure": {
+        "name": "Avgång {index} tid till avgång"
+      }
+    }
+  }
+}

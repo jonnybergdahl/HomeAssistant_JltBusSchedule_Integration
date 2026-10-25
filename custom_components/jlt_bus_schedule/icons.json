@@ -1,0 +1,23 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "too_late": {
+        "default": "mdi:run",
+        "state": {
+          "on": "mdi:run-fast"
+        }
+      }
+    },
+    "sensor": {
+      "departure": {
+        "default": "mdi:bus"
+      },
+      "departure_time": {
+        "default": "mdi:clock-outline"
+      },
+      "time_to_departure": {
+        "default": "mdi:timer-sand"
+      }
+    }
+  }
+}

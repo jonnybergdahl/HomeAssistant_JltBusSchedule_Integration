@@ -1,0 +1,92 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Select bus stop",
+        "description": "Find the bus stop at https://www.jlt.se/res-med-oss/linjer-hallplatser/. The stop ID is the number at the end of the URL of the stop page.",
+        "data": {
+          "stop_id": "Stop ID",
+          "stop_name": "Stop name"
+        },
+        "data_description": {
+          "stop_id": "For example 6001350.",
+          "stop_name": "Optional name used in the entry title."
+        }
+      },
+      "route": {
+        "title": "Select line and destination",
+        "description": "Upcoming departures from {stop}.",
+        "data": {
+          "route": "Line and destination",
+          "direction": "Direction alias"
+        },
+        "data_description": {
+          "direction": "Short name such as north or west. It is used in the entity IDs, for example sensor.jlt_bus_1_north_departure_1."
+        }
+      },
+      "manual": {
+        "title": "Enter line and destination",
+        "description": "No upcoming departures were found from {stop}, so enter the line and destination manually.",
+        "data": {
+          "line": "Line",
+          "destination": "Destination",
+          "direction": "Direction alias"
+        },
+        "data_description": {
+          "destination": "As shown on jlt.se, for example Huskvarna via Centrum-Elmia.",
+          "direction": "Short name such as north or west. It is used in the entity IDs, for example sensor.jlt_bus_1_north_departure_1."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to fetch departures from jlt.se.",
+      "invalid_stop_id": "The stop ID must be a number.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This line and destination is already configured for the stop."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "too_late_threshold": "Too late threshold",
+          "number_of_departures": "Number of departures",
+          "scan_interval": "Update interval"
+        },
+        "data_description": {
+          "too_late_threshold": "Minutes it takes to get to the bus stop.",
+          "number_of_departures": "Number of upcoming departures to create entities for.",
+          "scan_interval": "How often to fetch departures from jlt.se."
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "too_late": {
+        "name": "Departure {index} too late"
+      }
+    },
+    "sensor": {
+      "departure": {
+        "name": "Departure {index}",
+        "state_attributes": {
+          "line_number": { "name": "Line number" },
+          "direction": { "name": "Direction" },
+          "departure": { "name": "Departure" },
+          "time_to_departure": { "name": "Time to departure" },
+          "minutes_to_departure": { "name": "Minutes to departure" },
+          "too_late": { "name": "Too late" }
+        }
+      },
+      "departure_time": {
+        "name": "Departure {index} time"
+      },
+      "time_to_departure": {
+        "name": "Departure {index} time to departure"
+      }
+    }
+  }
+}
