@@ -1,6 +1,7 @@
 {
   "domain": "jlt_bus_schedule",
   "name": "JLT Bus Schedule",
+  "categories": ["vehicles_transport.public_transport"],
   "codeowners": ["@jonnybergdahl"],
   "config_flow": true,
   "documentation": "https://github.com/jonnybergdahl/HomeAssistant_JltBusSchedule_Integration",
