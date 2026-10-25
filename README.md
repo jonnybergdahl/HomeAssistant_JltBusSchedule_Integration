@@ -8,6 +8,8 @@ to a native integration with UI configuration. It uses the same entity IDs, so e
 
 JLT has no public API for departures, so the integration scrapes
 `https://www.jlt.se/api/StopAreaApi/GetClosestDepartures?fromId={stop_id}&take=60`, the HTML fragment used by the departure board on jlt.se.
+Stops are looked up with the stop search of the [JLT travel planner](https://www.jlt.se/reseplaneraren/), which jlt.se embeds from
+`www.etiscloud.net`.
 
 ## Installation
 
@@ -37,8 +39,9 @@ Click the button to start setting up the integration.
 
 You can also go to **Settings → Devices & services → Add integration** and select **JLT Bus Schedule**.
 
-1. **Stop ID**. Go to https://www.jlt.se/res-med-oss/linjer-hallplatser/ and search for the bus stop. Select it and
-   look at the URL. The stop ID is the number at the end of the URL. You can also give the stop a name, which is only used in the entry title.
+1. **Bus stop**. Enter the name of the bus stop, for example `Rådhusparken`, and select it among the stops found.
+   If you already know the stop ID, you can enter it instead, for example `6001350`. The entry title then shows the ID
+   instead of the stop name; you can rename the entry afterwards.
 2. **Line and destination**. The integration fetches the upcoming departures from the stop and lets you pick a line and destination.
    If there are no upcoming departures (at night, for example), you enter the line and destination manually instead.
    The destination is the text after "mot" on jlt.se, for example `Huskvarna via Centrum-Elmia`.
@@ -105,7 +108,8 @@ It works unchanged with this integration.
 ## Migrating from the AppDaemon app
 
 1. Remove or disable the AppDaemon app, and restart Home Assistant so the states it created are gone.
-2. Add the integration once for each entry in `TARGETS`, using the same stop ID, destination and direction alias.
+2. Add the integration once for each entry in `TARGETS`. Enter the stop ID from `TARGETS` instead of searching, as the
+   search can return a different stop ID for the same stop, and use the same destination and direction alias.
 3. Set the options to match `TOO_LATE_TRESHOLD` and `NUMBER_OF_DEPARTURES`.
 
 The entity IDs are the same as before, with one difference: `..._too_late` is now a binary sensor,
@@ -125,6 +129,6 @@ venv/bin/pip install -r requirements_test.txt
 venv/bin/pytest
 ```
 
-Tests marked `live` call the live jlt.se site. Skip them with `pytest -m "not live"`.
+Tests marked `live` call the live jlt.se site and travel planner. Skip them with `pytest -m "not live"`.
 
 The brand images in `custom_components/jlt_bus_schedule/brand` are shown by Home Assistant 2026.3 and later.
